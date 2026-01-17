@@ -31,7 +31,13 @@ body {
 .page {
   min-height: 100vh;
   background: var(--bg);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial,
+  font-family:
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    "Helvetica Neue",
+    Arial,
     sans-serif;
 }
 
@@ -137,8 +143,9 @@ body {
 }
 
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
 }
 
 /* Badge */
@@ -181,9 +188,6 @@ body {
   min-height: 260px;
 }
 
-lyout: center;
-}
-
 .cardHeader {
   display: flex;
   justify-content: space-between;
@@ -217,12 +221,6 @@ lyout: center;
   gap: 10px;
 }
 
-.bigChoiceButtons .choiceBtn {
-  padding: 18px 12px;
-  font-size: 16px;
-  border-radius: 14px;
-}
-
 .choiceBtn {
   border-radius: 12px;
   padding: 14px 10px;
@@ -231,6 +229,13 @@ lyout: center;
   color: var(--ink);
   cursor: pointer;
   font-weight: 900;
+  font-size: 14px;
+}
+
+.bigChoiceButtons .choiceBtn {
+  padding: 18px 12px;
+  font-size: 16px;
+  border-radius: 14px;
 }
 
 .choiceReal {
@@ -241,7 +246,7 @@ lyout: center;
   border-color: #666;
 }
 
-/* No “selected by default” — only active class changes */
+/* only applies after user clicks */
 .choiceBtnActive {
   background: var(--accent);
   border-color: var(--accent);
