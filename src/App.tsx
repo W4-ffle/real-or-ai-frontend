@@ -1,3 +1,4 @@
+// src/App.tsx
 import { useEffect, useMemo, useState } from "react";
 import "./styles.css";
 
@@ -201,10 +202,10 @@ export default function App() {
 
       <main className="layout">
         <section className="stage" aria-label="Current round">
-          <div className="stageInner">
+          <div className="imageFrame">
             {current ? (
               <img
-                className="stageImg"
+                className="image"
                 src={current.imageUrl}
                 alt={`Round ${current.roundIndex}`}
                 loading="eager"
@@ -213,6 +214,7 @@ export default function App() {
               <div className="loading">Loading…</div>
             )}
           </div>
+          <div className="adSlot">Advertisement</div>
         </section>
 
         <aside className="side">
@@ -236,10 +238,12 @@ export default function App() {
               )}
             </div>
 
-            <div className="choiceRow">
+            <div className="choiceButtons">
               <button
                 type="button"
-                className={`choiceBtn ${currentChoice === "real" ? "choiceBtnActive" : ""}`}
+                className={`choiceBtn choiceReal ${
+                  currentChoice === "real" ? "choiceBtnActive" : ""
+                }`}
                 onClick={() => current && setChoice(current.roundIndex, "real")}
               >
                 Real
@@ -247,7 +251,9 @@ export default function App() {
 
               <button
                 type="button"
-                className={`choiceBtn ${currentChoice === "ai" ? "choiceBtnActive" : ""}`}
+                className={`choiceBtn choiceAi ${
+                  currentChoice === "ai" ? "choiceBtnActive" : ""
+                }`}
                 onClick={() => current && setChoice(current.roundIndex, "ai")}
               >
                 AI
@@ -341,8 +347,6 @@ export default function App() {
           </div>
         </aside>
       </main>
-
-      <footer className="footer">Advertisement</footer>
     </div>
   );
 }

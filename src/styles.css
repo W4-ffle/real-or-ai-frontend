@@ -1,3 +1,4 @@
+/* src/styles.css */
 :root {
   --bg: #e8e2d8;
   --card: #f3efe8;
@@ -81,38 +82,43 @@ body {
   align-items: start;
 }
 
-/* Stage (fixed aspect like Timeguessr) */
+/* Stage */
 .stage {
   background: transparent;
 }
 
-.stageInner {
-  background: var(--card);
+/* Image framing: removes huge black bars by letting image size drive height */
+.imageFrame {
+  background: #0e0e0e;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);
-
-  /* fixed “game stage” aspect: prevents crazy tall images */
-  aspect-ratio: 16 / 10;
-  width: 100%;
-
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
 }
 
-.stageImg {
+.image {
   width: 100%;
-  height: 100%;
-  object-fit: contain; /* letterbox instead of stretching/cropping */
+  height: auto;
+  max-height: 80vh;
+  object-fit: contain;
   display: block;
-  background: #111; /* black bars like a stage */
+  background: #0e0e0e;
+}
+
+/* Ad slot under image */
+.adSlot {
+  text-align: center;
+  opacity: 0.5;
+  font-size: 12px;
+  margin-top: 10px;
 }
 
 .loading {
   padding: 20px;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 /* Right side column */
@@ -177,13 +183,14 @@ body {
   font-weight: 800;
   font-size: 13px;
 }
+
 .cardMeta {
   font-size: 11px;
   opacity: 0.7;
 }
 
-/* Choice buttons */
-.choiceRow {
+/* Choice buttons (more obvious, Timeguessr-like) */
+.choiceButtons {
   margin-top: 10px;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -192,17 +199,27 @@ body {
 
 .choiceBtn {
   border-radius: 12px;
-  padding: 12px 10px;
+  padding: 14px 10px;
   border: 2px solid #bbb;
   background: var(--white);
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 900;
   font-size: 14px;
 }
 
-.choiceBtnActive {
+.choiceReal {
   border-color: var(--accent);
 }
+
+.choiceAi {
+  border-color: #666;
+}
+
+.choiceBtnActive {
+  background: var(--accent);
+  color: #fff;
+}
+
 .choiceBtn:active {
   transform: translateY(1px);
 }
@@ -232,7 +249,7 @@ body {
   border: 1px solid #bbb;
   background: var(--white);
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 900;
   font-size: 14px;
 }
 
@@ -244,6 +261,7 @@ body {
   cursor: not-allowed;
   opacity: 0.6;
 }
+
 .navBtn:active:not(:disabled) {
   transform: translateY(1px);
 }
@@ -261,6 +279,7 @@ body {
   font-weight: 900;
   margin-bottom: 6px;
 }
+
 .resultLine {
   margin-top: 6px;
   font-size: 13px;
@@ -295,11 +314,13 @@ body {
 .lbRank {
   font-weight: 900;
 }
+
 .lbUser {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .lbScore {
   text-align: right;
   font-weight: 900;
@@ -308,14 +329,6 @@ body {
 .devLine {
   font-size: 10px;
   opacity: 0.55;
-}
-
-/* Footer */
-.footer {
-  text-align: center;
-  padding: 0 0 18px;
-  opacity: 0.55;
-  font-size: 12px;
 }
 
 /* Responsive */
@@ -333,12 +346,12 @@ body {
     gap: 12px;
   }
 
-  .stageInner {
-    aspect-ratio: 16 / 11;
-  }
-
   .badgeValue {
     font-size: 28px;
+  }
+
+  .image {
+    max-height: 70vh;
   }
 }
 
@@ -351,7 +364,7 @@ body {
     padding: 8px 10px;
   }
 
-  .choiceRow,
+  .choiceButtons,
   .navRow {
     grid-template-columns: 1fr;
   }
