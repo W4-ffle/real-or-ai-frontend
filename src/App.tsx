@@ -236,53 +236,32 @@ export default function App() {
               <div className="loading">Loading…</div>
             ) : (
               <TransformWrapper
-                key={current.roundIndex} /* resets zoom each round */
+                key={current.roundIndex}
                 initialScale={1}
                 minScale={1}
-                maxScale={5}
+                maxScale={6}
                 centerOnInit
-                wheel={{ step: 0.12 }}
                 doubleClick={{ disabled: true }}
+                wheel={{
+                  step: 0.12,
+                  smoothStep: 0.02,
+                  wheelDisabled: false,
+                  touchPadDisabled: false,
+                }}
                 panning={{ velocityDisabled: true }}
               >
-                {({ zoomIn, zoomOut, resetTransform }) => (
-                  <>
-                    <div className="zoomControls">
-                      <button
-                        type="button"
-                        onClick={() => zoomOut()}
-                        aria-label="Zoom out"
-                      >
-                        −
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => resetTransform()}
-                        aria-label="Reset"
-                      >
-                        Reset
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => zoomIn()}
-                        aria-label="Zoom in"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    <TransformComponent
-                      wrapperClass="zoomWrap"
-                      contentClass="zoomContent"
-                    >
-                      <img
-                        className="imageZoom"
-                        src={current.imageUrl}
-                        alt={`Round ${current.roundIndex}`}
-                        draggable={false}
-                      />
-                    </TransformComponent>
-                  </>
+                {() => (
+                  <TransformComponent
+                    wrapperClass="zoomWrap"
+                    contentClass="zoomContent"
+                  >
+                    <img
+                      className="imageZoom"
+                      src={current.imageUrl}
+                      alt={`Round ${current.roundIndex}`}
+                      draggable={false}
+                    />
+                  </TransformComponent>
                 )}
               </TransformWrapper>
             )}
