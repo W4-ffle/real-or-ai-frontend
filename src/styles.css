@@ -72,12 +72,11 @@ body {
   transform: translateY(1px);
 }
 
-/* Main layout: wider, uses the screen */
+/* Main layout */
 .layout {
   max-width: 1400px;
   margin: 0 auto;
   padding: 12px 20px 28px;
-
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
   gap: 20px;
@@ -89,36 +88,24 @@ body {
   background: transparent;
 }
 
-/* Image frame: actually fills space, no tiny preview */
+/* Image frame: fixed max height so it doesn't go below the fold */
 .imageFrame {
+  position: relative;
   background: #0e0e0e;
   border: 1px solid var(--border);
   border-radius: 18px;
   overflow: hidden;
   box-shadow: var(--shadow);
   width: 100%;
-
-  /* KEY: do not go below the fold */
-  height: min(72vh, 720px);
-
+  height: min(68vh, 640px);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.image {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  display: block;
-  background: #0e0e0e;
-}
-
 .loading {
   padding: 20px;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* Ad slot under image */
@@ -138,18 +125,12 @@ body {
   gap: 12px;
 }
 
-.mono {
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
-}
-
 /* Badge */
 .badge {
   background: var(--accent);
   color: #fff;
   border-radius: var(--radius);
-  padding: 14px 14px;
+  padding: 14px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
@@ -167,6 +148,12 @@ body {
   font-size: 32px;
   font-weight: 900;
   line-height: 1;
+}
+
+.mono {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
 }
 
 /* Cards */
@@ -193,13 +180,12 @@ body {
   font-weight: 900;
   font-size: 13px;
 }
-
 .cardMeta {
   font-size: 11px;
   opacity: 0.7;
 }
 
-/* Choice buttons: readable text + clear active state */
+/* Choice buttons */
 .choiceButtons {
   margin-top: 10px;
   display: grid;
@@ -221,7 +207,6 @@ body {
 .choiceReal {
   border-color: var(--accent);
 }
-
 .choiceAi {
   border-color: #666;
 }
@@ -236,7 +221,6 @@ body {
   opacity: 0.55;
   cursor: not-allowed;
 }
-
 .choiceBtn:active:not(:disabled) {
   transform: translateY(1px);
 }
@@ -244,7 +228,6 @@ body {
 .hintRow {
   margin-top: 10px;
 }
-
 .hint {
   font-size: 12px;
   color: var(--muted);
@@ -261,12 +244,11 @@ body {
   font-size: 13px;
 }
 
-/* Nav: single forward button only */
+/* Nav */
 .navRowSingle {
   margin-top: 12px;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
 }
 
 .navBtn {
@@ -290,7 +272,6 @@ body {
   cursor: not-allowed;
   opacity: 0.6;
 }
-
 .navBtn:active:not(:disabled) {
   transform: translateY(1px);
 }
@@ -308,7 +289,6 @@ body {
   font-weight: 900;
   margin-bottom: 6px;
 }
-
 .resultLine {
   margin-top: 6px;
   font-size: 13px;
@@ -343,13 +323,11 @@ body {
 .lbRank {
   font-weight: 900;
 }
-
 .lbUser {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .lbScore {
   text-align: right;
   font-weight: 900;
@@ -360,58 +338,7 @@ body {
   opacity: 0.55;
 }
 
-/* Responsive */
-@media (max-width: 1020px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-
-  .topbar {
-    padding: 14px 12px 8px;
-  }
-
-  .layout {
-    padding: 10px 12px 22px;
-    gap: 12px;
-  }
-
-  .imageFrame {
-    min-height: 62vh;
-  }
-
-  .badgeValue {
-    font-size: 28px;
-  }
-}
-
-@media (max-width: 520px) {
-  .brand {
-    font-size: 20px;
-  }
-
-  .topbarBtn {
-    padding: 8px 10px;
-  }
-
-  .choiceButtons {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 980px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-
-  .side {
-    position: static;
-  }
-
-  .imageFrame {
-    height: min(60vh, 520px);
-  }
-}
-
+/* ===== Zoom/Pan (react-zoom-pan-pinch) ===== */
 .zoomWrap {
   width: 100%;
   height: 100%;
@@ -425,7 +352,6 @@ body {
   justify-content: center;
 }
 
-/* Make sure the pan/zoom image can exceed container size when zoomed */
 .imageZoom {
   max-width: 100%;
   max-height: 100%;
@@ -434,7 +360,7 @@ body {
   -webkit-user-drag: none;
 }
 
-/* Floating zoom buttons inside the image area */
+/* Zoom controls (inside imageFrame) */
 .zoomControls {
   position: absolute;
   top: 10px;
@@ -454,7 +380,39 @@ body {
   cursor: pointer;
 }
 
-/* Important: imageFrame must be position: relative for controls */
-.imageFrame {
-  position: relative;
+/* Responsive */
+@media (max-width: 1020px) {
+  .layout {
+    grid-template-columns: 1fr;
+    padding: 10px 12px 22px;
+    gap: 12px;
+  }
+
+  .topbar {
+    padding: 14px 12px 8px;
+  }
+
+  .side {
+    position: static;
+  }
+
+  .imageFrame {
+    height: min(58vh, 520px);
+  }
+
+  .badgeValue {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand {
+    font-size: 20px;
+  }
+  .topbarBtn {
+    padding: 8px 10px;
+  }
+  .choiceButtons {
+    grid-template-columns: 1fr;
+  }
 }

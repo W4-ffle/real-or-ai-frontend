@@ -8,22 +8,24 @@ type PuzzleResponse = { date: string; rounds: PuzzleRound[]; error?: string };
 
 type Choice = "real" | "ai";
 
-type AttemptResponse =
-  | {
-      ok: true;
-      alreadySubmitted: boolean;
-      puzzleDate: string;
-      score: number;
-      totalRounds: number;
-      createdAt?: string | null;
-    }
-  | {
-      error: string;
-      puzzleDate?: string;
-      totalRounds?: number;
-      answered?: number;
-      details?: string;
-    };
+type AttemptOk = {
+  ok: true;
+  alreadySubmitted: boolean;
+  puzzleDate: string;
+  score: number;
+  totalRounds: number;
+  createdAt?: string | null;
+};
+
+type AttemptErr = {
+  error: string;
+  puzzleDate?: string;
+  totalRounds?: number;
+  answered?: number;
+  details?: string;
+};
+
+type AttemptResponse = AttemptOk | AttemptErr;
 
 type LeaderboardEntry = {
   rank: number;
@@ -47,6 +49,10 @@ function ensureUserId(): string {
   return id;
 }
 
+function isAttemptOk(a: AttemptResponse | null): a is AttemptOk {
+  return !!a && (a as any).ok === true;
+}
+
 export default function App() {
   const apiBase = import.meta.env.VITE_API_BASE as string;
   const userId = useMemo(() => ensureUserId(), []);
@@ -57,8 +63,7 @@ export default function App() {
   const [answers, setAnswers] = useState<Record<number, Choice>>({});
   const [idx, setIdx] = useState(0);
 
-  // Forward-only lock: highest roundIndex the user is allowed to answer.
-  // Start with the first round's index (once puzzle loads).
+  // Forward-only lock: only the "current unlocked" round can be answered.
   const [unlockedRoundIndex, setUnlockedRoundIndex] = useState<number | null>(
     null,
   );
@@ -104,27 +109,22 @@ export default function App() {
   const totalRounds = rounds.length || 5;
 
   const current = rounds[idx] ?? null;
-  const isLast = idx === rounds.length - 1;
+  const isLast = rounds.length > 0 ? idx === rounds.length - 1 : false;
+
+  const hasSubmitted = isAttemptOk(attempt);
+  const displayScore = hasSubmitted ? attempt.score : 0;
 
   const currentRoundIndex = current?.roundIndex ?? 0;
   const currentChoice = current ? answers[current.roundIndex] : undefined;
 
-  const displayScore =
-    attempt &&
-    "ok" in attempt &&
-    attempt.ok &&
-    typeof attempt.score === "number"
-      ? attempt.score
-      : 0;
-
-  // Current round is editable only if it is the unlocked round and we haven't submitted.
   const isCurrentLocked =
     submitting ||
-    (attempt && "ok" in attempt && attempt.ok) ||
+    hasSubmitted ||
     unlockedRoundIndex === null ||
     currentRoundIndex !== unlockedRoundIndex;
 
   function setChoice(roundIndex: number, choice: Choice) {
+    if (!current) return;
     if (isCurrentLocked) return;
     setAnswers((prev) => ({ ...prev, [roundIndex]: choice }));
   }
@@ -139,7 +139,6 @@ export default function App() {
 
     setErr(null);
 
-    // Lock this round by advancing the unlocked round index to the next round
     if (!isLast) {
       const nextRound = rounds[idx + 1];
       setUnlockedRoundIndex(nextRound.roundIndex);
@@ -147,12 +146,11 @@ export default function App() {
       return;
     }
 
-    // If last round, submit
     submitAttempt();
   }
 
   async function submitAttempt() {
-    if (!puzzle || !current) return;
+    if (!puzzle) return;
 
     for (const r of rounds) {
       if (!answers[r.roundIndex]) {
@@ -186,13 +184,13 @@ export default function App() {
 
       if (!res.ok) {
         setAttempt(null);
-        setErr(
+        const msg =
           "error" in json
             ? json.details
               ? `${json.error}: ${json.details}`
               : json.error
-            : `Submit failed (${res.status})`,
-        );
+            : `Submit failed (${res.status})`;
+        setErr(msg);
         return;
       }
 
@@ -234,56 +232,63 @@ export default function App() {
       <main className="layout">
         <section className="stage" aria-label="Current round">
           <div className="imageFrame">
-            <TransformWrapper
-              initialScale={1}
-              minScale={1}
-              maxScale={5}
-              centerOnInit
-              wheel={{ step: 0.12 }}
-              doubleClick={{ disabled: true }}
-              panning={{ velocityDisabled: true }}
-            >
-              {({ zoomIn, zoomOut, resetTransform }) => (
-                <>
-                  <div className="zoomControls">
-                    <button
-                      type="button"
-                      onClick={() => zoomOut()}
-                      aria-label="Zoom out"
-                    >
-                      −
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => resetTransform()}
-                      aria-label="Reset"
-                    >
-                      Reset
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => zoomIn()}
-                      aria-label="Zoom in"
-                    >
-                      +
-                    </button>
-                  </div>
+            {!current ? (
+              <div className="loading">Loading…</div>
+            ) : (
+              <TransformWrapper
+                key={current.roundIndex} /* resets zoom each round */
+                initialScale={1}
+                minScale={1}
+                maxScale={5}
+                centerOnInit
+                wheel={{ step: 0.12 }}
+                doubleClick={{ disabled: true }}
+                panning={{ velocityDisabled: true }}
+              >
+                {({ zoomIn, zoomOut, resetTransform }) => (
+                  <>
+                    <div className="zoomControls">
+                      <button
+                        type="button"
+                        onClick={() => zoomOut()}
+                        aria-label="Zoom out"
+                      >
+                        −
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => resetTransform()}
+                        aria-label="Reset"
+                      >
+                        Reset
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => zoomIn()}
+                        aria-label="Zoom in"
+                      >
+                        +
+                      </button>
+                    </div>
 
-                  <TransformComponent
-                    wrapperClass="zoomWrap"
-                    contentClass="zoomContent"
-                  >
-                    <img
-                      className="imageZoom"
-                      src={current.imageUrl}
-                      alt={`Round ${current.roundIndex}`}
-                      draggable={false}
-                    />
-                  </TransformComponent>
-                </>
-              )}
-            </TransformWrapper>
+                    <TransformComponent
+                      wrapperClass="zoomWrap"
+                      contentClass="zoomContent"
+                    >
+                      <img
+                        className="imageZoom"
+                        src={current.imageUrl}
+                        alt={`Round ${current.roundIndex}`}
+                        draggable={false}
+                      />
+                    </TransformComponent>
+                  </>
+                )}
+              </TransformWrapper>
+            )}
           </div>
+
+          <div className="adSlot">Advertisement</div>
         </section>
 
         <aside className="side">
@@ -292,7 +297,9 @@ export default function App() {
             <div className="badgeLabel">Score</div>
 
             <div className="badgeValue">
-              {Math.min(idx + 1, totalRounds)}/{totalRounds}
+              {rounds.length === 0
+                ? "—"
+                : `${Math.min(idx + 1, totalRounds)}/${totalRounds}`}
             </div>
             <div className="badgeValue">{displayScore}</div>
           </div>
@@ -310,9 +317,7 @@ export default function App() {
             <div className="choiceButtons">
               <button
                 type="button"
-                className={`choiceBtn choiceReal ${
-                  currentChoice === "real" ? "choiceBtnActive" : ""
-                }`}
+                className={`choiceBtn choiceReal ${currentChoice === "real" ? "choiceBtnActive" : ""}`}
                 onClick={() => current && setChoice(current.roundIndex, "real")}
                 disabled={!current || isCurrentLocked}
               >
@@ -321,9 +326,7 @@ export default function App() {
 
               <button
                 type="button"
-                className={`choiceBtn choiceAi ${
-                  currentChoice === "ai" ? "choiceBtnActive" : ""
-                }`}
+                className={`choiceBtn choiceAi ${currentChoice === "ai" ? "choiceBtnActive" : ""}`}
                 onClick={() => current && setChoice(current.roundIndex, "ai")}
                 disabled={!current || isCurrentLocked}
               >
@@ -333,9 +336,11 @@ export default function App() {
 
             <div className="hintRow">
               <div className="hint">
-                {isCurrentLocked
-                  ? "Locked (you already moved past this round)."
-                  : "Pick one to continue."}
+                {!current
+                  ? "Loading…"
+                  : isCurrentLocked
+                    ? "Locked (you already moved past this round)."
+                    : "Pick one to continue."}
               </div>
             </div>
 
@@ -346,17 +351,13 @@ export default function App() {
                 type="button"
                 className="navBtn navBtnPrimary"
                 onClick={next}
-                disabled={
-                  !current ||
-                  submitting ||
-                  !!(attempt && "ok" in attempt && attempt.ok)
-                }
+                disabled={!current || submitting || hasSubmitted}
               >
                 {submitOrNextLabel}
               </button>
             </div>
 
-            {attempt && "ok" in attempt && attempt.ok && (
+            {hasSubmitted && (
               <div className="resultBox">
                 <div className="resultTitle">Result</div>
                 <div className="resultLine">
