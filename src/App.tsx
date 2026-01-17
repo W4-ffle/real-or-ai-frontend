@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import "./App.css";
+import "./styles.css";
 
 type PuzzleRound = { roundIndex: number; imageUrl: string };
 type PuzzleResponse = { date: string; rounds: PuzzleRound[]; error?: string };
@@ -11,7 +11,7 @@ type AttemptResponse =
       ok: true;
       alreadySubmitted: boolean;
       puzzleDate: string;
-      score: number | null;
+      score: number;
       totalRounds: number;
       createdAt?: string | null;
     }
@@ -20,6 +20,7 @@ type AttemptResponse =
       puzzleDate?: string;
       totalRounds?: number;
       answered?: number;
+      details?: string;
     };
 
 type LeaderboardEntry = {
@@ -51,10 +52,7 @@ export default function App() {
   const [puzzle, setPuzzle] = useState<PuzzleResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  // roundIndex -> choice
   const [answers, setAnswers] = useState<Record<number, Choice>>({});
-
-  // current position in puzzle.rounds
   const [idx, setIdx] = useState(0);
 
   const [submitting, setSubmitting] = useState(false);
@@ -81,7 +79,6 @@ export default function App() {
           return;
         }
 
-        // Ensure consistent round ordering
         json.rounds.sort((a, b) => a.roundIndex - b.roundIndex);
 
         setPuzzle(json);
@@ -94,18 +91,42 @@ export default function App() {
     load();
   }, [apiBase]);
 
-  const totalRounds = puzzle?.rounds.length ?? 0;
+  const totalRounds = puzzle?.rounds.length ?? 5;
   const current = puzzle?.rounds[idx] ?? null;
-  const isLast = idx === totalRounds - 1;
+  const isLast = idx === (puzzle?.rounds.length ?? 1) - 1;
+
+  const currentChoice = current ? answers[current.roundIndex] : undefined;
+
+  const displayScore =
+    attempt &&
+    "ok" in attempt &&
+    attempt.ok &&
+    typeof attempt.score === "number"
+      ? attempt.score
+      : 0;
 
   function setChoice(roundIndex: number, choice: Choice) {
     setAnswers((prev) => ({ ...prev, [roundIndex]: choice }));
   }
 
-  async function submitAttempt() {
-    if (!puzzle) return;
+  function prev() {
+    setErr(null);
+    setIdx((v) => Math.max(v - 1, 0));
+  }
 
-    // validate answered all rounds
+  function next() {
+    if (!current) return;
+    if (!answers[current.roundIndex]) {
+      setErr("Choose Real or AI to continue.");
+      return;
+    }
+    setErr(null);
+    setIdx((v) => Math.min(v + 1, (puzzle?.rounds.length ?? 1) - 1));
+  }
+
+  async function submitAttempt() {
+    if (!puzzle || !current) return;
+
     for (const r of puzzle.rounds) {
       if (!answers[r.roundIndex]) {
         setErr(`Please answer Round ${r.roundIndex} before submitting.`);
@@ -140,15 +161,20 @@ export default function App() {
       const json = (await res.json()) as AttemptResponse;
       if (!res.ok) {
         setAttempt(null);
-        setErr("error" in json ? json.error : `Submit failed (${res.status})`);
+        setErr(
+          "error" in json
+            ? json.details
+              ? `${json.error}: ${json.details}`
+              : json.error
+            : `Submit failed (${res.status})`,
+        );
         return;
       }
 
       setAttempt(json);
 
-      // Load leaderboard after submit
       setLoadingLeaderboard(true);
-      const lbRes = await fetch(`${apiBase}/api/leaderboard/today?limit=20`);
+      const lbRes = await fetch(`${apiBase}/api/leaderboard/today?limit=10`);
       const lbJson = (await lbRes.json()) as LeaderboardResponse;
       if (lbRes.ok) setLeaderboard(lbJson);
       setLoadingLeaderboard(false);
@@ -161,232 +187,169 @@ export default function App() {
     }
   }
 
-  function next() {
-    if (!current) return;
-    if (!answers[current.roundIndex]) {
-      setErr("Please choose Real or AI to continue.");
-      return;
-    }
-    setErr(null);
-    setIdx((v) => Math.min(v + 1, totalRounds - 1));
-  }
-
-  function prev() {
-    setErr(null);
-    setIdx((v) => Math.max(v - 1, 0));
-  }
-
-  if (!apiBase) {
-    return (
-      <div style={{ maxWidth: 900, margin: "40px auto", padding: 16 }}>
-        <h1>Real or AI</h1>
-        <p>
-          Missing <code>VITE_API_BASE</code>.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ maxWidth: 900, margin: "40px auto", padding: 16 }}>
-      <h1>Real or AI</h1>
+    <div className="page">
+      {/* Top bar */}
+      <header className="topbar">
+        <div className="brand">REALORAI</div>
+        <button
+          type="button"
+          className="topbarBtn"
+          onClick={() => alert("Add 'How to play' modal later.")}
+        >
+          How to play
+        </button>
+      </header>
 
-      <p style={{ marginTop: 4 }}>
-        API Base: <code>{apiBase}</code>
-      </p>
+      {/* Main layout */}
+      <main className="layout">
+        {/* Left: Image panel */}
+        <section className="imagePanel" aria-label="Current round image">
+          {current ? (
+            <img
+              className="image"
+              src={current.imageUrl}
+              alt={`Round ${current.roundIndex}`}
+              loading="eager"
+            />
+          ) : (
+            <div className="loading">Loading…</div>
+          )}
+        </section>
 
-      {err && (
-        <div style={{ padding: 12, border: "1px solid #f99", marginTop: 16 }}>
-          <strong>Error:</strong> {err}
-        </div>
-      )}
+        {/* Right column */}
+        <aside className="side">
+          {/* Round/Score badge */}
+          <div className="badge">
+            <div className="badgeLabel">Round</div>
+            <div className="badgeLabel">Score</div>
 
-      {!puzzle ? (
-        <p style={{ marginTop: 16 }}>Loading puzzle…</p>
-      ) : (
-        <>
-          <div style={{ marginTop: 16, padding: 12, border: "1px solid #ddd" }}>
-            <div style={{ fontSize: 18, fontWeight: 600 }}>Daily Puzzle</div>
-            <div style={{ marginTop: 4 }}>
-              Date (UTC): <code>{puzzle.date}</code>
+            <div className="badgeValue">
+              {Math.min(idx + 1, totalRounds)}/{totalRounds}
             </div>
-            <div style={{ marginTop: 4 }}>
-              Round: {idx + 1}/{totalRounds}
-            </div>
+            <div className="badgeValue">{displayScore}</div>
           </div>
 
-          {current && (
-            <div
-              style={{ marginTop: 18, padding: 12, border: "1px solid #ddd" }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "baseline",
-                }}
+          {/* Choice card */}
+          <div className="card">
+            <div className="cardHeader">
+              <div className="cardTitle">Make your call</div>
+              {puzzle && (
+                <div className="cardMeta">
+                  Date (UTC): <code className="mono">{puzzle.date}</code>
+                </div>
+              )}
+            </div>
+
+            <div className="choiceRow">
+              <button
+                type="button"
+                className={`choiceBtn ${currentChoice === "real" ? "choiceBtnActive" : ""}`}
+                onClick={() => current && setChoice(current.roundIndex, "real")}
               >
-                <h2 style={{ margin: 0, fontSize: 18 }}>
-                  Round {current.roundIndex}
-                </h2>
-                <div>
-                  Selected:{" "}
-                  {answers[current.roundIndex] ? (
-                    <strong>{answers[current.roundIndex].toUpperCase()}</strong>
-                  ) : (
-                    <span style={{ opacity: 0.7 }}>None</span>
-                  )}
+                Real
+              </button>
+
+              <button
+                type="button"
+                className={`choiceBtn ${currentChoice === "ai" ? "choiceBtnActive" : ""}`}
+                onClick={() => current && setChoice(current.roundIndex, "ai")}
+              >
+                AI
+              </button>
+            </div>
+
+            {err && <div className="errorBox">{err}</div>}
+
+            <div className="navRow">
+              <button
+                type="button"
+                className="navBtn"
+                onClick={prev}
+                disabled={idx === 0 || submitting}
+              >
+                Back
+              </button>
+
+              {!isLast ? (
+                <button
+                  type="button"
+                  className="navBtn"
+                  onClick={next}
+                  disabled={submitting}
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="navBtn navBtnPrimary"
+                  onClick={submitAttempt}
+                  disabled={submitting}
+                >
+                  {submitting ? "Submitting…" : "Submit"}
+                </button>
+              )}
+            </div>
+
+            {attempt && "ok" in attempt && attempt.ok && (
+              <div className="resultBox">
+                <div className="resultTitle">Result</div>
+                <div className="resultLine">
+                  {attempt.alreadySubmitted
+                    ? "Already submitted today."
+                    : "Submitted."}
+                </div>
+                <div className="resultLine">
+                  Score: <strong>{attempt.score}</strong> /{" "}
+                  {attempt.totalRounds}
                 </div>
               </div>
+            )}
+          </div>
 
-              <div style={{ marginTop: 10 }}>
-                <img
-                  src={current.imageUrl}
-                  alt={`Round ${current.roundIndex}`}
-                  style={{
-                    width: "100%",
-                    maxHeight: 420,
-                    objectFit: "cover",
-                    border: "1px solid #444",
-                  }}
-                  loading="lazy"
-                />
-              </div>
+          {/* Leaderboard panel (map-style card placeholder) */}
+          <div className="card cardTall">
+            <div className="cardTitle">Leaderboard (Today)</div>
 
-              <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => setChoice(current.roundIndex, "real")}
-                  style={{
-                    padding: "10px 14px",
-                    border:
-                      answers[current.roundIndex] === "real"
-                        ? "2px solid #e11d48"
-                        : "1px solid #444",
-                    background: "transparent",
-                    color: "#fff",
-                    cursor: "pointer",
-                  }}
-                >
-                  Real
-                </button>
+            {loadingLeaderboard && <div className="muted">Loading…</div>}
 
-                <button
-                  type="button"
-                  onClick={() => setChoice(current.roundIndex, "ai")}
-                  style={{
-                    padding: "10px 14px",
-                    border:
-                      answers[current.roundIndex] === "ai"
-                        ? "2px solid #e11d48"
-                        : "1px solid #444",
-                    background: "transparent",
-                    color: "#fff",
-                    cursor: "pointer",
-                  }}
-                >
-                  AI
-                </button>
-              </div>
-
-              <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={prev}
-                  disabled={idx === 0 || submitting}
-                  style={{
-                    padding: "10px 14px",
-                    border: "1px solid #444",
-                    background: "#111",
-                    color: "#fff",
-                    cursor: idx === 0 || submitting ? "not-allowed" : "pointer",
-                    opacity: idx === 0 ? 0.6 : 1,
-                  }}
-                >
-                  Back
-                </button>
-
-                {!isLast ? (
-                  <button
-                    type="button"
-                    onClick={next}
-                    disabled={submitting}
-                    style={{
-                      padding: "10px 14px",
-                      border: "1px solid #444",
-                      background: "#111",
-                      color: "#fff",
-                      cursor: submitting ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    Next
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={submitAttempt}
-                    disabled={submitting}
-                    style={{
-                      padding: "10px 14px",
-                      border: "1px solid #444",
-                      background: submitting ? "#222" : "#111",
-                      color: "#fff",
-                      cursor: submitting ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    {submitting ? "Submitting…" : "Submit"}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {attempt && "ok" in attempt && (
-            <div
-              style={{ marginTop: 18, padding: 12, border: "1px solid #ddd" }}
-            >
-              <h2 style={{ marginTop: 0 }}>Result</h2>
-              <p style={{ marginTop: 6 }}>
-                {attempt.alreadySubmitted
-                  ? "Already submitted today."
-                  : "Submitted."}
-              </p>
-              <p style={{ marginTop: 6 }}>
-                Score: <strong>{attempt.score}</strong> / {attempt.totalRounds}
-              </p>
-            </div>
-          )}
-
-          <div style={{ marginTop: 18, padding: 12, border: "1px solid #ddd" }}>
-            <h2 style={{ marginTop: 0 }}>Leaderboard (Today)</h2>
-            {loadingLeaderboard && <p>Loading leaderboard…</p>}
             {!loadingLeaderboard &&
               leaderboard &&
-              leaderboard.leaderboard.length === 0 && <p>No attempts yet.</p>}
+              leaderboard.leaderboard.length === 0 && (
+                <div className="muted">No attempts yet.</div>
+              )}
+
             {!loadingLeaderboard &&
               leaderboard &&
               leaderboard.leaderboard.length > 0 && (
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
-                >
+                <div className="lbList">
                   {leaderboard.leaderboard.map((e) => (
-                    <div key={e.rank} style={{ display: "flex", gap: 12 }}>
-                      <div style={{ width: 36 }}>#{e.rank}</div>
-                      <div style={{ width: 90 }}>
-                        <code>{e.user}</code>
-                      </div>
-                      <div style={{ width: 60 }}>{e.score}</div>
-                      <div style={{ opacity: 0.7 }}>{e.createdAt}</div>
+                    <div key={e.rank} className="lbRow">
+                      <div className="lbRank">#{e.rank}</div>
+                      <div className="lbUser mono">{e.user}</div>
+                      <div className="lbScore">{e.score}</div>
                     </div>
                   ))}
                 </div>
               )}
+
             {!loadingLeaderboard && !leaderboard && (
-              <p>Submit an attempt to populate the leaderboard.</p>
+              <div className="muted">
+                Submit an attempt to populate the leaderboard.
+              </div>
             )}
           </div>
-        </>
-      )}
+
+          <div className="devLine">
+            API: <code className="mono">{apiBase}</code> · User:{" "}
+            <code className="mono">{userId.slice(0, 8)}</code>
+          </div>
+        </aside>
+      </main>
+
+      {/* Footer like "Advertisement" */}
+      <footer className="footer">Advertisement</footer>
     </div>
   );
 }
