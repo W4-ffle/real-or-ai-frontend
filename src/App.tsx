@@ -1,5 +1,6 @@
 // src/App.tsx
 import { useEffect, useMemo, useState } from "react";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import "./styles.css";
 
 type PuzzleRound = { roundIndex: number; imageUrl: string };
@@ -220,7 +221,7 @@ export default function App() {
   return (
     <div className="page">
       <header className="topbar">
-        <div className="brand">REALORAI</div>
+        <div className="brand">IS IT REAL?</div>
         <button
           type="button"
           className="topbarBtn"
@@ -233,19 +234,56 @@ export default function App() {
       <main className="layout">
         <section className="stage" aria-label="Current round">
           <div className="imageFrame">
-            {current ? (
-              <img
-                className="image"
-                src={current.imageUrl}
-                alt={`Round ${current.roundIndex}`}
-                loading="eager"
-              />
-            ) : (
-              <div className="loading">Loading…</div>
-            )}
-          </div>
+            <TransformWrapper
+              initialScale={1}
+              minScale={1}
+              maxScale={5}
+              centerOnInit
+              wheel={{ step: 0.12 }}
+              doubleClick={{ disabled: true }}
+              panning={{ velocityDisabled: true }}
+            >
+              {({ zoomIn, zoomOut, resetTransform }) => (
+                <>
+                  <div className="zoomControls">
+                    <button
+                      type="button"
+                      onClick={() => zoomOut()}
+                      aria-label="Zoom out"
+                    >
+                      −
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => resetTransform()}
+                      aria-label="Reset"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => zoomIn()}
+                      aria-label="Zoom in"
+                    >
+                      +
+                    </button>
+                  </div>
 
-          <div className="adSlot">Advertisement</div>
+                  <TransformComponent
+                    wrapperClass="zoomWrap"
+                    contentClass="zoomContent"
+                  >
+                    <img
+                      className="imageZoom"
+                      src={current.imageUrl}
+                      alt={`Round ${current.roundIndex}`}
+                      draggable={false}
+                    />
+                  </TransformComponent>
+                </>
+              )}
+            </TransformWrapper>
+          </div>
         </section>
 
         <aside className="side">
