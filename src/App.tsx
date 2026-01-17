@@ -91,9 +91,10 @@ export default function App() {
     load();
   }, [apiBase]);
 
-  const totalRounds = puzzle?.rounds.length ?? 5;
-  const current = puzzle?.rounds[idx] ?? null;
-  const isLast = idx === (puzzle?.rounds.length ?? 1) - 1;
+  const rounds = puzzle?.rounds ?? [];
+  const totalRounds = rounds.length || 5;
+  const current = rounds[idx] ?? null;
+  const isLast = idx === rounds.length - 1;
 
   const currentChoice = current ? answers[current.roundIndex] : undefined;
 
@@ -121,13 +122,13 @@ export default function App() {
       return;
     }
     setErr(null);
-    setIdx((v) => Math.min(v + 1, (puzzle?.rounds.length ?? 1) - 1));
+    setIdx((v) => Math.min(v + 1, rounds.length - 1));
   }
 
   async function submitAttempt() {
     if (!puzzle || !current) return;
 
-    for (const r of puzzle.rounds) {
+    for (const r of rounds) {
       if (!answers[r.roundIndex]) {
         setErr(`Please answer Round ${r.roundIndex} before submitting.`);
         return;
@@ -142,10 +143,7 @@ export default function App() {
       const payload = {
         puzzleDate: puzzle.date,
         answers: Object.fromEntries(
-          puzzle.rounds.map((r) => [
-            String(r.roundIndex),
-            answers[r.roundIndex],
-          ]),
+          rounds.map((r) => [String(r.roundIndex), answers[r.roundIndex]]),
         ),
       };
 
@@ -159,6 +157,7 @@ export default function App() {
       });
 
       const json = (await res.json()) as AttemptResponse;
+
       if (!res.ok) {
         setAttempt(null);
         setErr(
@@ -189,37 +188,34 @@ export default function App() {
 
   return (
     <div className="page">
-      {/* Top bar */}
       <header className="topbar">
         <div className="brand">REALORAI</div>
         <button
           type="button"
           className="topbarBtn"
-          onClick={() => alert("Add 'How to play' modal later.")}
+          onClick={() => alert("Add 'How to play' later.")}
         >
           How to play
         </button>
       </header>
 
-      {/* Main layout */}
       <main className="layout">
-        {/* Left: Image panel */}
-        <section className="imagePanel" aria-label="Current round image">
-          {current ? (
-            <img
-              className="image"
-              src={current.imageUrl}
-              alt={`Round ${current.roundIndex}`}
-              loading="eager"
-            />
-          ) : (
-            <div className="loading">Loading…</div>
-          )}
+        <section className="stage" aria-label="Current round">
+          <div className="stageInner">
+            {current ? (
+              <img
+                className="stageImg"
+                src={current.imageUrl}
+                alt={`Round ${current.roundIndex}`}
+                loading="eager"
+              />
+            ) : (
+              <div className="loading">Loading…</div>
+            )}
+          </div>
         </section>
 
-        {/* Right column */}
         <aside className="side">
-          {/* Round/Score badge */}
           <div className="badge">
             <div className="badgeLabel">Round</div>
             <div className="badgeLabel">Score</div>
@@ -230,7 +226,6 @@ export default function App() {
             <div className="badgeValue">{displayScore}</div>
           </div>
 
-          {/* Choice card */}
           <div className="card">
             <div className="cardHeader">
               <div className="cardTitle">Make your call</div>
@@ -308,7 +303,6 @@ export default function App() {
             )}
           </div>
 
-          {/* Leaderboard panel (map-style card placeholder) */}
           <div className="card cardTall">
             <div className="cardTitle">Leaderboard (Today)</div>
 
@@ -348,7 +342,6 @@ export default function App() {
         </aside>
       </main>
 
-      {/* Footer like "Advertisement" */}
       <footer className="footer">Advertisement</footer>
     </div>
   );

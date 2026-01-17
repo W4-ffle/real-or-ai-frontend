@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Magnifying glass lens -->
+  <circle cx="28" cy="28" r="16" fill="none" stroke="#ffffff" stroke-width="4"></circle>
+
+  <!-- Magnifying glass handle -->
+  <line x1="40" y1="40" x2="54" y2="54" stroke="#ffffff" stroke-width="6" stroke-linecap="round"></line>
+
+  <!-- Computer inside the lens -->
+  <!-- Monitor -->
+  <rect x="19" y="22" width="18" height="12" rx="2" fill="#e11d48"></rect>
+  <!-- Stand -->
+  <rect x="27" y="35" width="2.8" height="5" rx="1.2" fill="#e11d48"></rect>
+  <rect x="23" y="40" width="10" height="3" rx="1.5" fill="#e11d48"></rect>
+</svg>
