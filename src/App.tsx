@@ -56,6 +56,12 @@ export default function App() {
   const [answers, setAnswers] = useState<Record<number, Choice>>({});
   const [idx, setIdx] = useState(0);
 
+  // Forward-only lock: highest roundIndex the user is allowed to answer.
+  // Start with the first round's index (once puzzle loads).
+  const [unlockedRoundIndex, setUnlockedRoundIndex] = useState<number | null>(
+    null,
+  );
+
   const [submitting, setSubmitting] = useState(false);
   const [attempt, setAttempt] = useState<AttemptResponse | null>(null);
 
@@ -85,6 +91,7 @@ export default function App() {
         setPuzzle(json);
         setAnswers({});
         setIdx(0);
+        setUnlockedRoundIndex(json.rounds[0]?.roundIndex ?? 1);
       } catch (e: any) {
         setErr(e?.message ?? String(e));
       }
@@ -94,9 +101,11 @@ export default function App() {
 
   const rounds = puzzle?.rounds ?? [];
   const totalRounds = rounds.length || 5;
+
   const current = rounds[idx] ?? null;
   const isLast = idx === rounds.length - 1;
 
+  const currentRoundIndex = current?.roundIndex ?? 0;
   const currentChoice = current ? answers[current.roundIndex] : undefined;
 
   const displayScore =
@@ -107,23 +116,38 @@ export default function App() {
       ? attempt.score
       : 0;
 
-  function setChoice(roundIndex: number, choice: Choice) {
-    setAnswers((prev) => ({ ...prev, [roundIndex]: choice }));
-  }
+  // Current round is editable only if it is the unlocked round and we haven't submitted.
+  const isCurrentLocked =
+    submitting ||
+    (attempt && "ok" in attempt && attempt.ok) ||
+    unlockedRoundIndex === null ||
+    currentRoundIndex !== unlockedRoundIndex;
 
-  function prev() {
-    setErr(null);
-    setIdx((v) => Math.max(v - 1, 0));
+  function setChoice(roundIndex: number, choice: Choice) {
+    if (isCurrentLocked) return;
+    setAnswers((prev) => ({ ...prev, [roundIndex]: choice }));
   }
 
   function next() {
     if (!current) return;
+
     if (!answers[current.roundIndex]) {
       setErr("Choose Real or AI to continue.");
       return;
     }
+
     setErr(null);
-    setIdx((v) => Math.min(v + 1, rounds.length - 1));
+
+    // Lock this round by advancing the unlocked round index to the next round
+    if (!isLast) {
+      const nextRound = rounds[idx + 1];
+      setUnlockedRoundIndex(nextRound.roundIndex);
+      setIdx((v) => Math.min(v + 1, rounds.length - 1));
+      return;
+    }
+
+    // If last round, submit
+    submitAttempt();
   }
 
   async function submitAttempt() {
@@ -187,6 +211,12 @@ export default function App() {
     }
   }
 
+  const submitOrNextLabel = isLast
+    ? submitting
+      ? "Submitting…"
+      : "Submit"
+    : "Next";
+
   return (
     <div className="page">
       <header className="topbar">
@@ -214,6 +244,7 @@ export default function App() {
               <div className="loading">Loading…</div>
             )}
           </div>
+
           <div className="adSlot">Advertisement</div>
         </section>
 
@@ -245,6 +276,7 @@ export default function App() {
                   currentChoice === "real" ? "choiceBtnActive" : ""
                 }`}
                 onClick={() => current && setChoice(current.roundIndex, "real")}
+                disabled={!current || isCurrentLocked}
               >
                 Real
               </button>
@@ -255,42 +287,35 @@ export default function App() {
                   currentChoice === "ai" ? "choiceBtnActive" : ""
                 }`}
                 onClick={() => current && setChoice(current.roundIndex, "ai")}
+                disabled={!current || isCurrentLocked}
               >
                 AI
               </button>
             </div>
 
+            <div className="hintRow">
+              <div className="hint">
+                {isCurrentLocked
+                  ? "Locked (you already moved past this round)."
+                  : "Pick one to continue."}
+              </div>
+            </div>
+
             {err && <div className="errorBox">{err}</div>}
 
-            <div className="navRow">
+            <div className="navRowSingle">
               <button
                 type="button"
-                className="navBtn"
-                onClick={prev}
-                disabled={idx === 0 || submitting}
+                className="navBtn navBtnPrimary"
+                onClick={next}
+                disabled={
+                  !current ||
+                  submitting ||
+                  !!(attempt && "ok" in attempt && attempt.ok)
+                }
               >
-                Back
+                {submitOrNextLabel}
               </button>
-
-              {!isLast ? (
-                <button
-                  type="button"
-                  className="navBtn"
-                  onClick={next}
-                  disabled={submitting}
-                >
-                  Next
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="navBtn navBtnPrimary"
-                  onClick={submitAttempt}
-                  disabled={submitting}
-                >
-                  {submitting ? "Submitting…" : "Submit"}
-                </button>
-              )}
             </div>
 
             {attempt && "ok" in attempt && attempt.ok && (
