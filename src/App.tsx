@@ -243,8 +243,8 @@ export default function App() {
                 centerOnInit
                 doubleClick={{ disabled: true }}
                 wheel={{
-                  step: 0.08,
-                  smoothStep: 0.015,
+                  step: 0.05,
+                  smoothStep: 0.01,
                 }}
                 panning={{ velocityDisabled: true }}
               >
