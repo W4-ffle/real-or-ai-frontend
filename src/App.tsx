@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
-type PuzzleResponse = {
-  date: string;
-  rounds: Record<string, string[]>;
-  error?: string;
-};
+type PuzzleRound = { roundIndex: number; imageUrl: string };
+type PuzzleResponse = { date: string; rounds: PuzzleRound[]; error?: string };
+
+type Choice = "real" | "ai";
 
 function ensureUserId(): string {
   const k = "real_or_ai_user_id";
@@ -20,30 +19,24 @@ function ensureUserId(): string {
 
 export default function App() {
   const apiBase = import.meta.env.VITE_API_BASE as string;
-
   const userId = useMemo(() => ensureUserId(), []);
+
   const [puzzle, setPuzzle] = useState<PuzzleResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
-
-  // roundIndex -> chosen image URL
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<number, Choice>>({});
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
         setErr(null);
-        const res = await fetch(`${apiBase}/api/puzzle/today`, {
-          method: "GET",
-        });
+        const res = await fetch(`${apiBase}/api/puzzle/today`);
         const json = (await res.json()) as PuzzleResponse;
-
         if (!res.ok) {
           setPuzzle(null);
-          setErr(json?.error ?? `Failed to load puzzle (${res.status})`);
+          setErr(json.error ?? `Failed to load puzzle (${res.status})`);
           return;
         }
-
         setPuzzle(json);
         setAnswers({});
         setSubmitted(false);
@@ -54,55 +47,33 @@ export default function App() {
     load();
   }, [apiBase]);
 
-  if (!apiBase) {
-    return (
-      <div style={{ maxWidth: 900, margin: "40px auto", padding: 16 }}>
-        <h1>Real or AI</h1>
-        <p>
-          Missing <code>VITE_API_BASE</code>.
-        </p>
-      </div>
-    );
-  }
-
-  const roundEntries = puzzle
-    ? Object.entries(puzzle.rounds).sort((a, b) => Number(a[0]) - Number(b[0]))
-    : [];
-  const totalRounds = roundEntries.length;
+  const totalRounds = puzzle?.rounds.length ?? 0;
   const answeredCount = Object.keys(answers).length;
 
-  function choose(round: string, imageUrl: string) {
-    setAnswers((prev) => ({ ...prev, [round]: imageUrl }));
+  function setChoice(roundIndex: number, choice: Choice) {
+    setAnswers((prev) => ({ ...prev, [roundIndex]: choice }));
   }
 
   function onSubmit() {
     if (!puzzle) return;
     if (answeredCount !== totalRounds) {
-      setErr(
-        `Please answer all rounds (${answeredCount}/${totalRounds} selected).`,
-      );
+      setErr(`Please answer all rounds (${answeredCount}/${totalRounds}).`);
       return;
     }
     setErr(null);
     setSubmitted(true);
 
-    // Next step: we will POST to /api/attempt with X-User-Id and answers,
-    // and show score + leaderboard.
-    console.log("Submitting attempt", {
-      userId,
-      puzzleDate: puzzle.date,
-      answers,
-    });
+    // Next step: POST /api/attempt with userId, puzzle.date, answers
+    console.log("Attempt", { userId, date: puzzle.date, answers });
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: "40px auto", padding: 16 }}>
+    <div style={{ maxWidth: 1000, margin: "40px auto", padding: 16 }}>
       <h1>Real or AI</h1>
-
-      <p style={{ marginTop: 4 }}>
+      <p>
         API Base: <code>{apiBase}</code>
       </p>
-      <p style={{ marginTop: 4 }}>
+      <p>
         User: <code>{userId}</code>
       </p>
 
@@ -134,72 +105,85 @@ export default function App() {
               gap: 22,
             }}
           >
-            {roundEntries.map(([round, images]) => (
-              <div
-                key={round}
-                style={{ padding: 12, border: "1px solid #ddd" }}
-              >
+            {puzzle.rounds.map((r) => {
+              const choice = answers[r.roundIndex];
+              return (
                 <div
-                  style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    justifyContent: "space-between",
-                    gap: 12,
-                  }}
+                  key={r.roundIndex}
+                  style={{ padding: 12, border: "1px solid #ddd" }}
                 >
-                  <h2 style={{ margin: 0, fontSize: 18 }}>Round {round}</h2>
-                  <div>
-                    Selected:{" "}
-                    {answers[round] ? (
-                      <span style={{ fontWeight: 600 }}>Yes</span>
-                    ) : (
-                      <span style={{ opacity: 0.7 }}>No</span>
-                    )}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "baseline",
+                    }}
+                  >
+                    <h2 style={{ margin: 0, fontSize: 18 }}>
+                      Round {r.roundIndex}
+                    </h2>
+                    <div>
+                      Selected:{" "}
+                      {choice ? (
+                        <strong>{choice.toUpperCase()}</strong>
+                      ) : (
+                        <span style={{ opacity: 0.7 }}>None</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 10 }}>
+                    <img
+                      src={r.imageUrl}
+                      alt={`Round ${r.roundIndex}`}
+                      style={{
+                        width: "100%",
+                        maxHeight: 420,
+                        objectFit: "cover",
+                        border: "1px solid #444",
+                      }}
+                      loading="lazy"
+                    />
+                  </div>
+
+                  <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => setChoice(r.roundIndex, "real")}
+                      style={{
+                        padding: "10px 14px",
+                        border:
+                          choice === "real"
+                            ? "2px solid #e11d48"
+                            : "1px solid #444",
+                        background: "transparent",
+                        color: "#fff",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Real
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setChoice(r.roundIndex, "ai")}
+                      style={{
+                        padding: "10px 14px",
+                        border:
+                          choice === "ai"
+                            ? "2px solid #e11d48"
+                            : "1px solid #444",
+                        background: "transparent",
+                        color: "#fff",
+                        cursor: "pointer",
+                      }}
+                    >
+                      AI
+                    </button>
                   </div>
                 </div>
-
-                <div
-                  style={{
-                    marginTop: 10,
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                    gap: 12,
-                  }}
-                >
-                  {images.map((imgUrl) => {
-                    const selected = answers[round] === imgUrl;
-                    return (
-                      <button
-                        key={imgUrl}
-                        type="button"
-                        onClick={() => choose(round, imgUrl)}
-                        style={{
-                          padding: 0,
-                          border: selected
-                            ? "3px solid #e11d48"
-                            : "1px solid #444",
-                          background: "transparent",
-                          cursor: "pointer",
-                        }}
-                        aria-label={`Select image for round ${round}`}
-                      >
-                        <img
-                          src={imgUrl}
-                          alt={`Round ${round}`}
-                          style={{
-                            display: "block",
-                            width: "100%",
-                            height: 220,
-                            objectFit: "cover",
-                          }}
-                          loading="lazy"
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div
@@ -223,12 +207,6 @@ export default function App() {
             >
               {submitted ? "Submitted" : "Submit"}
             </button>
-
-            {submitted && (
-              <div style={{ opacity: 0.85 }}>
-                Submitted locally. Next step is server-side scoring.
-              </div>
-            )}
           </div>
         </>
       )}
