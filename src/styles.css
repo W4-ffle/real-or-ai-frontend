@@ -383,3 +383,78 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* -------------------------
+   HOME / LANDING SCREEN
+-------------------------- */
+.homePage {
+  min-height: 100vh;
+  background: var(--bg);
+  font-family:
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+}
+
+.homeTop {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 18px 22px 10px;
+}
+
+.homeMain {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 24px 22px 60px;
+  display: grid;
+  place-items: center;
+}
+
+.homeCard {
+  width: min(720px, 100%);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 22px;
+}
+
+.homeTitle {
+  font-size: 28px;
+  font-weight: 950;
+  letter-spacing: 0.2px;
+}
+
+.homeSubtitle {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.homePlayBtn {
+  margin-top: 18px;
+  width: 100%;
+  border-radius: 16px;
+  padding: 16px 14px;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  font-weight: 950;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.homePlayBtn:active {
+  transform: translateY(1px);
+}
+
+.homeFoot {
+  margin-top: 14px;
+  font-size: 11px;
+  opacity: 0.6;
+}

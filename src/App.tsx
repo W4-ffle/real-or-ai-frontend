@@ -36,9 +36,13 @@ function ensureUserId(): string {
   return id;
 }
 
+type Screen = "home" | "game";
+
 export default function App() {
   const apiBase = import.meta.env.VITE_API_BASE as string;
   const userId = useMemo(() => ensureUserId(), []);
+
+  const [screen, setScreen] = useState<Screen>("home");
 
   const [puzzle, setPuzzle] = useState<PuzzleResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -46,40 +50,13 @@ export default function App() {
   const [answers, setAnswers] = useState<Record<number, Choice>>({});
   const [idx, setIdx] = useState(0);
 
+  // Forward-only lock: highest roundIndex the user is allowed to answer.
   const [unlockedRoundIndex, setUnlockedRoundIndex] = useState<number | null>(
     null,
   );
 
   const [submitting, setSubmitting] = useState(false);
   const [attempt, setAttempt] = useState<AttemptResponse | null>(null);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        setErr(null);
-        setAttempt(null);
-
-        const res = await fetch(`${apiBase}/api/puzzle/today`);
-        const json = (await res.json()) as PuzzleResponse;
-
-        if (!res.ok) {
-          setPuzzle(null);
-          setErr(json.error ?? `Failed to load puzzle (${res.status})`);
-          return;
-        }
-
-        json.rounds.sort((a, b) => a.roundIndex - b.roundIndex);
-
-        setPuzzle(json);
-        setAnswers({});
-        setIdx(0);
-        setUnlockedRoundIndex(json.rounds[0]?.roundIndex ?? 1);
-      } catch (e: any) {
-        setErr(e?.message ?? String(e));
-      }
-    }
-    load();
-  }, [apiBase]);
 
   const rounds = puzzle?.rounds ?? [];
   const totalRounds = rounds.length || 5;
@@ -98,13 +75,38 @@ export default function App() {
       ? attempt.score
       : 0;
 
-  const attemptOk = !!(attempt && "ok" in attempt && attempt.ok);
-
   const isCurrentLocked =
     submitting ||
-    attemptOk ||
+    (attempt && "ok" in attempt && attempt.ok) ||
     unlockedRoundIndex === null ||
     currentRoundIndex !== unlockedRoundIndex;
+
+  async function startGame() {
+    try {
+      setErr(null);
+      setAttempt(null);
+
+      const res = await fetch(`${apiBase}/api/puzzle/today`);
+      const json = (await res.json()) as PuzzleResponse;
+
+      if (!res.ok) {
+        setPuzzle(null);
+        setErr(json.error ?? `Failed to load puzzle (${res.status})`);
+        return;
+      }
+
+      json.rounds.sort((a, b) => a.roundIndex - b.roundIndex);
+
+      setPuzzle(json);
+      setAnswers({});
+      setIdx(0);
+      setUnlockedRoundIndex(json.rounds[0]?.roundIndex ?? 1);
+
+      setScreen("game");
+    } catch (e: any) {
+      setErr(e?.message ?? String(e));
+    }
+  }
 
   function setChoice(roundIndex: number, choice: Choice) {
     if (isCurrentLocked) return;
@@ -185,8 +187,50 @@ export default function App() {
     }
   }
 
-  const buttonLabel = isLast ? (submitting ? "Submitting…" : "Submit") : "Next";
+  const submitOrNextLabel = isLast
+    ? submitting
+      ? "Submitting…"
+      : "Submit"
+    : "Next";
 
+  // -------------------------
+  // HOME SCREEN
+  // -------------------------
+  if (screen === "home") {
+    return (
+      <div className="homePage">
+        <header className="homeTop">
+          <div className="brand">IS IT REAL?</div>
+        </header>
+
+        <main className="homeMain">
+          <div className="homeCard">
+            <div className="homeTitle">Daily “Real or AI” challenge</div>
+            <div className="homeSubtitle">
+              You’ll see 5 images. For each one, guess if it’s <b>Real</b> or{" "}
+              <b>AI</b>.
+              <br />
+              No account. One run per day.
+            </div>
+
+            {err && <div className="errorBox">{err}</div>}
+
+            <button className="homePlayBtn" onClick={startGame}>
+              Play
+            </button>
+
+            <div className="homeFoot">
+              API: <code className="mono">{apiBase}</code>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // -------------------------
+  // GAME SCREEN (your current UI)
+  // -------------------------
   return (
     <div className="page">
       <header className="topbar">
@@ -205,12 +249,11 @@ export default function App() {
           <div className="imageFrame">
             {current ? (
               <TransformWrapper
-                key={current.roundIndex}
                 initialScale={1}
                 minScale={1}
-                maxScale={6}
+                maxScale={5}
                 centerOnInit
-                wheel={{ step: 0.04, smoothStep: 0.01 }}
+                wheel={{ step: 0.18 }} // adjust sensitivity here
                 doubleClick={{ disabled: true }}
                 panning={{ velocityDisabled: true }}
               >
@@ -253,33 +296,11 @@ export default function App() {
               )}
             </div>
 
-            {err && <div className="errorBox">{err}</div>}
-
-            {attemptOk && (
-              <div className="resultBox">
-                <div className="resultTitle">Result</div>
-                <div className="resultLine">
-                  {"ok" in attempt && attempt.ok && attempt.alreadySubmitted
-                    ? "Already submitted today."
-                    : "Submitted."}
-                </div>
-                {"ok" in attempt && attempt.ok && (
-                  <div className="resultLine">
-                    Score: <strong>{attempt.score}</strong> /{" "}
-                    {attempt.totalRounds}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Bottom controls */}
             <div className="controlsBottom">
               <div className="choiceButtons bigChoiceButtons">
                 <button
                   type="button"
-                  className={`choiceBtn choiceReal ${
-                    currentChoice === "real" ? "choiceBtnActive" : ""
-                  }`}
+                  className={`choiceBtn ${currentChoice === "real" ? "choiceBtnActive" : ""}`}
                   onClick={() =>
                     current && setChoice(current.roundIndex, "real")
                   }
@@ -290,9 +311,7 @@ export default function App() {
 
                 <button
                   type="button"
-                  className={`choiceBtn choiceAi ${
-                    currentChoice === "ai" ? "choiceBtnActive" : ""
-                  }`}
+                  className={`choiceBtn ${currentChoice === "ai" ? "choiceBtnActive" : ""}`}
                   onClick={() => current && setChoice(current.roundIndex, "ai")}
                   disabled={!current || isCurrentLocked}
                 >
@@ -308,16 +327,37 @@ export default function App() {
                 </div>
               </div>
 
+              {err && <div className="errorBox">{err}</div>}
+
               <div className="navRowSingle">
                 <button
                   type="button"
                   className="navBtn navBtnPrimary navBtnBig"
                   onClick={next}
-                  disabled={!current || submitting || attemptOk}
+                  disabled={
+                    !current ||
+                    submitting ||
+                    !!(attempt && "ok" in attempt && attempt.ok)
+                  }
                 >
-                  {buttonLabel}
+                  {submitOrNextLabel}
                 </button>
               </div>
+
+              {attempt && "ok" in attempt && attempt.ok && (
+                <div className="resultBox">
+                  <div className="resultTitle">Result</div>
+                  <div className="resultLine">
+                    {attempt.alreadySubmitted
+                      ? "Already submitted today."
+                      : "Submitted."}
+                  </div>
+                  <div className="resultLine">
+                    Score: <strong>{attempt.score}</strong> /{" "}
+                    {attempt.totalRounds}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
