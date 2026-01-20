@@ -198,175 +198,149 @@ export default function App() {
   // -------------------------
   if (screen === "home") {
     return (
-      <div className="homePage">
-        <header className="homeTop">
+      <div className="page">
+        <header className="topbar">
           <div className="brand">IS IT REAL?</div>
+          <button
+            type="button"
+            className="topbarBtn"
+            onClick={() => alert("Add 'How to play' later.")}
+          >
+            How to play
+          </button>
         </header>
 
-        <main className="homeMain">
-          <div className="homeCard">
-            <div className="homeTitle">Daily “Real or AI” challenge</div>
-            <div className="homeSubtitle">
-              You’ll see 5 images. For each one, guess if it’s <b>Real</b> or{" "}
-              <b>AI</b>.
-              <br />
-              No account. One run per day.
+        <main className="layout">
+          <section className="stage" aria-label="Current round">
+            <div className="imageFrame">
+              {current ? (
+                <TransformWrapper
+                  initialScale={1}
+                  minScale={1}
+                  maxScale={5}
+                  centerOnInit
+                  wheel={{ step: 0.12 }} // smaller = less sensitive, bigger = more sensitive
+                  doubleClick={{ disabled: true }}
+                  panning={{ velocityDisabled: true }}
+                >
+                  <TransformComponent
+                    wrapperClass="zoomWrap"
+                    contentClass="zoomContent"
+                  >
+                    <img
+                      className="imageZoom"
+                      src={current.imageUrl}
+                      alt={`Round ${current.roundIndex}`}
+                      draggable={false}
+                    />
+                  </TransformComponent>
+                </TransformWrapper>
+              ) : (
+                <div className="loading">Loading…</div>
+              )}
+            </div>
+          </section>
+
+          <aside className="side">
+            <div className="badge">
+              <div className="badgeLabel">Round</div>
+              <div className="badgeLabel">Score</div>
+
+              <div className="badgeValue">
+                {Math.min(idx + 1, totalRounds)}/{totalRounds}
+              </div>
+              <div className="badgeValue">{displayScore}</div>
             </div>
 
-            {err && <div className="errorBox">{err}</div>}
+            <div className="card">
+              <div className="cardHeader">
+                <div className="cardTitle">Make your call</div>
+                {puzzle && (
+                  <div className="cardMeta">
+                    Date (UTC): <code className="mono">{puzzle.date}</code>
+                  </div>
+                )}
+              </div>
 
-            <button className="homePlayBtn" onClick={startGame}>
-              Play
-            </button>
+              {/* Controls are stacked at the bottom of this card */}
+              <div className="controlsBottom">
+                <div className="choiceButtons bigChoiceButtons">
+                  <button
+                    type="button"
+                    className={`choiceBtn ${
+                      currentChoice === "real" ? "choiceBtnActive" : ""
+                    }`}
+                    onClick={() =>
+                      current && setChoice(current.roundIndex, "real")
+                    }
+                    disabled={!current || isCurrentLocked}
+                  >
+                    Real
+                  </button>
 
-            <div className="homeFoot">
-              API: <code className="mono">{apiBase}</code>
+                  <button
+                    type="button"
+                    className={`choiceBtn ${
+                      currentChoice === "ai" ? "choiceBtnActive" : ""
+                    }`}
+                    onClick={() =>
+                      current && setChoice(current.roundIndex, "ai")
+                    }
+                    disabled={!current || isCurrentLocked}
+                  >
+                    AI
+                  </button>
+                </div>
+
+                <div className="hintRow">
+                  <div className="hint">
+                    {isCurrentLocked
+                      ? "Locked (you already moved past this round)."
+                      : "Pick one to continue."}
+                  </div>
+                </div>
+
+                {err && <div className="errorBox">{err}</div>}
+
+                <div className="navRowSingle">
+                  <button
+                    type="button"
+                    className="navBtn navBtnPrimary navBtnBig"
+                    onClick={next}
+                    disabled={
+                      !current ||
+                      submitting ||
+                      !!(attempt && "ok" in attempt && attempt.ok)
+                    }
+                  >
+                    {submitOrNextLabel}
+                  </button>
+                </div>
+
+                {attempt && "ok" in attempt && attempt.ok && (
+                  <div className="resultBox">
+                    <div className="resultTitle">Result</div>
+                    <div className="resultLine">
+                      {attempt.alreadySubmitted
+                        ? "Already submitted today."
+                        : "Submitted."}
+                    </div>
+                    <div className="resultLine">
+                      Score: <strong>{attempt.score}</strong> /{" "}
+                      {attempt.totalRounds}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+
+            <div className="devLine">
+              API: <code className="mono">{apiBase}</code> · User:{" "}
+              <code className="mono">{userId.slice(0, 8)}</code>
+            </div>
+          </aside>
         </main>
       </div>
     );
   }
-
-  // -------------------------
-  // GAME SCREEN (your current UI)
-  // -------------------------
-  return (
-    <div className="page">
-      <header className="topbar">
-        <div className="brand">IS IT REAL?</div>
-        <button
-          type="button"
-          className="topbarBtn"
-          onClick={() => alert("Add 'How to play' later.")}
-        >
-          How to play
-        </button>
-      </header>
-
-      <main className="layout">
-        <section className="stage" aria-label="Current round">
-          <div className="imageFrame">
-            {current ? (
-              <TransformWrapper
-                initialScale={1}
-                minScale={1}
-                maxScale={5}
-                centerOnInit
-                wheel={{ step: 0.18 }} // adjust sensitivity here
-                doubleClick={{ disabled: true }}
-                panning={{ velocityDisabled: true }}
-              >
-                <TransformComponent
-                  wrapperClass="zoomWrap"
-                  contentClass="zoomContent"
-                >
-                  <img
-                    className="imageZoom"
-                    src={current.imageUrl}
-                    alt={`Round ${current.roundIndex}`}
-                    draggable={false}
-                  />
-                </TransformComponent>
-              </TransformWrapper>
-            ) : (
-              <div className="loading">Loading…</div>
-            )}
-          </div>
-        </section>
-
-        <aside className="side">
-          <div className="badge">
-            <div className="badgeLabel">Round</div>
-            <div className="badgeLabel">Score</div>
-
-            <div className="badgeValue">
-              {Math.min(idx + 1, totalRounds)}/{totalRounds}
-            </div>
-            <div className="badgeValue">{displayScore}</div>
-          </div>
-
-          <div className="card callCard">
-            <div className="cardHeader">
-              <div className="cardTitle">Make your call</div>
-              {puzzle && (
-                <div className="cardMeta">
-                  Date (UTC): <code className="mono">{puzzle.date}</code>
-                </div>
-              )}
-            </div>
-
-            <div className="controlsBottom">
-              <div className="choiceButtons bigChoiceButtons">
-                <button
-                  type="button"
-                  className={`choiceBtn ${currentChoice === "real" ? "choiceBtnActive" : ""}`}
-                  onClick={() =>
-                    current && setChoice(current.roundIndex, "real")
-                  }
-                  disabled={!current || isCurrentLocked}
-                >
-                  Real
-                </button>
-
-                <button
-                  type="button"
-                  className={`choiceBtn ${currentChoice === "ai" ? "choiceBtnActive" : ""}`}
-                  onClick={() => current && setChoice(current.roundIndex, "ai")}
-                  disabled={!current || isCurrentLocked}
-                >
-                  AI
-                </button>
-              </div>
-
-              <div className="hintRow">
-                <div className="hint">
-                  {isCurrentLocked
-                    ? "Locked (you already moved past this round)."
-                    : "Pick one to continue."}
-                </div>
-              </div>
-
-              {err && <div className="errorBox">{err}</div>}
-
-              <div className="navRowSingle">
-                <button
-                  type="button"
-                  className="navBtn navBtnPrimary navBtnBig"
-                  onClick={next}
-                  disabled={
-                    !current ||
-                    submitting ||
-                    !!(attempt && "ok" in attempt && attempt.ok)
-                  }
-                >
-                  {submitOrNextLabel}
-                </button>
-              </div>
-
-              {attempt && "ok" in attempt && attempt.ok && (
-                <div className="resultBox">
-                  <div className="resultTitle">Result</div>
-                  <div className="resultLine">
-                    {attempt.alreadySubmitted
-                      ? "Already submitted today."
-                      : "Submitted."}
-                  </div>
-                  <div className="resultLine">
-                    Score: <strong>{attempt.score}</strong> /{" "}
-                    {attempt.totalRounds}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="devLine">
-            API: <code className="mono">{apiBase}</code> · User:{" "}
-            <code className="mono">{userId.slice(0, 8)}</code>
-          </div>
-        </aside>
-      </main>
-    </div>
-  );
 }
