@@ -368,20 +368,23 @@ body {
 .homePage {
   min-height: 100vh;
   background: var(--bg);
+  display: flex;
+  flex-direction: column;
 }
 
 .homeTop {
   max-width: 1480px;
   margin: 0 auto;
   padding: 18px 22px 10px;
+  width: 100%;
 }
 
 .homeMain {
-  max-width: 1480px;
-  margin: 0 auto;
+  flex: 1; /* TAKE REMAINING HEIGHT */
+  display: flex;
+  align-items: center; /* vertical centering */
+  justify-content: center; /* horizontal centering */
   padding: 24px 22px 60px;
-  display: grid;
-  place-items: center;
 }
 
 .homeCard {
